@@ -1,18 +1,18 @@
-"""create tables
+"""initial schema
 
-Revision ID: 261dc659b38f
+Revision ID: 8b4af87b8e90
 Revises: 
-Create Date: 2026-02-03 10:55:12.823901
+Create Date: 2026-02-04 09:15:03.305577
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '261dc659b38f'
+revision: str = '8b4af87b8e90'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,14 +27,14 @@ def upgrade() -> None:
     sa.Column('category', sa.Enum('BREATHWORK', 'GROUNDING', 'JOURNALING', 'SENSORY_MINDFULNESS', 'MOVEMENT', 'NATURE', 'CONNECTION', 'COLD_EXPOSURE', 'MEDITATION', name='activitycategory'), nullable=False),
     sa.Column('duration_minutes', sa.Enum('FIVE_MINUTES', 'TEN_MINUTES', 'FIFTEEN_MINUTES', 'TWENTY_MINUTES', 'THIRTY_MINUTES', name='activitytime'), nullable=False),
     sa.Column('instructions', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('flows',
     sa.Column('id', sa.UUID(as_uuid=False), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
@@ -44,8 +44,8 @@ def upgrade() -> None:
     sa.Column('display_name', sa.String(length=100), nullable=False),
     sa.Column('phone_number', sa.String(length=20), nullable=False),
     sa.Column('phone_verified', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('phone_number')
@@ -64,8 +64,8 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(as_uuid=False), nullable=False),
     sa.Column('user_id', sa.UUID(as_uuid=False), nullable=False),
     sa.Column('flow_id', sa.UUID(as_uuid=False), nullable=True),
-    sa.Column('started_at', sa.DateTime(), nullable=False),
-    sa.Column('ended_at', sa.DateTime(), nullable=True),
+    sa.Column('started_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('ended_at', postgresql.TIMESTAMP(timezone=True), nullable=True),
     sa.Column('outcome', sa.Enum('COMPLETED', 'ABANDONED', 'EXITED_EARLY', name='sessionoutcome'), nullable=True),
     sa.ForeignKeyConstraint(['flow_id'], ['flows.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
@@ -74,9 +74,9 @@ def upgrade() -> None:
     op.create_table('session_step_logs',
     sa.Column('id', sa.UUID(as_uuid=False), nullable=False),
     sa.Column('session_id', sa.UUID(as_uuid=False), nullable=False),
-    sa.Column('flow_step_id', sa.UUID(as_uuid=False), nullable=False),
-    sa.Column('started_at', sa.DateTime(), nullable=False),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('flow_step_id', sa.UUID(as_uuid=False), nullable=True),
+    sa.Column('started_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('completed_at', postgresql.TIMESTAMP(timezone=True), nullable=True),
     sa.Column('skipped', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['flow_step_id'], ['flow_steps.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ondelete='CASCADE'),

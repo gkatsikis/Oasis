@@ -1,11 +1,11 @@
 import enum
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List
 from uuid import uuid4
 
-from sqlalchemy import String, Text, Integer, Boolean, DateTime, ForeignKey, Enum
+from sqlalchemy import String, Text, Integer, Boolean, ForeignKey, Enum, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
 
 
 class ActivityCategory(str, enum.Enum):
@@ -57,8 +57,8 @@ class User(Base):
     phone_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     sessions: Mapped[List["Session"]] = relationship("Session", back_populates="user", lazy="selectin")
 
@@ -77,7 +77,7 @@ class Activity(Base):
     duration_minutes: Mapped[ActivityTime] = mapped_column(Enum(ActivityTime), nullable=False)
     instructions: Mapped[str] = mapped_column(Text, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
     flow_steps: Mapped[List["FlowStep"]] = relationship("FlowStep", back_populates="activity", lazy="selectin")
 
@@ -97,7 +97,7 @@ class Flow(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
     steps: Mapped[List["FlowStep"]] = relationship("FlowStep", back_populates="flow", lazy="selectin", order_by="FlowStep.order")
     sessions: Mapped[List["Session"]] = relationship("Session", back_populates="flow", lazy="selectin")
@@ -139,8 +139,8 @@ class Session(Base):
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     flow_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("flows.id", ondelete="SET NULL"), nullable=True)
     
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
-    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     outcome: Mapped[SessionOutcome | None] = mapped_column(Enum(SessionOutcome), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
@@ -158,10 +158,10 @@ class SessionStepLog(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     session_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
-    flow_step_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("flow_steps.id", ondelete="SET NULL"), nullable=False)
+    flow_step_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("flow_steps.id", ondelete="SET NULL"), nullable=True)
 
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     skipped: Mapped[bool] = mapped_column(Boolean, default=False)
 
     session: Mapped["Session"] = relationship("Session", back_populates="step_logs")
@@ -169,4 +169,4 @@ class SessionStepLog(Base):
 
     def __repr__(self) -> str:
         status = "skipped" if self.skipped else "completed" if self.completed_at else "in_progress"
-        return f"<SessionStepLog session={self.session_id} status={status}"
+        return f"<SessionStepLog session={self.session_id} status={status}>"

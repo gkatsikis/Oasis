@@ -1,7 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
+from database import get_db
+from models import Activity
+from schemas import ActivityCreate, ActivityResponse
 
 
 app = FastAPI(
@@ -32,3 +37,34 @@ async def root():
         "version": "0.1.0",
         "docs": "/docs",
     }
+
+
+@app.post("/activities", response_model=ActivityResponse)
+async def create_activity(
+    activity_data: ActivityCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new activity."""
+    activity = Activity(
+        name=activity_data.name,
+        category=activity_data.category,
+        duration_minutes=activity_data.duration_minutes,
+        instructions=activity_data.instructions,
+    )
+    db.add(activity)
+    await db.commit()
+    await db.refresh(activity)
+
+    return activity
+
+
+@app.get("/activities", response_model=list[ActivityResponse])
+async def get_activitiesdb (db: AsyncSession = Depends(get_db)):
+    """Get all activities."""
+
+    result = await db.execute(select(Activity))
+    activities = result.scalars().all()
+
+    return activities
+
+
